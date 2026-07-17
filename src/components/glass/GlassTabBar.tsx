@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,15 +37,15 @@ function TabButton({
 }) {
   const colors = useThemeColors();
   const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   return (
     <Pressable
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
-      onPressIn={() => (scale.value = withSpring(0.88, { damping: 15 }))}
-      onPressOut={() => (scale.value = withSpring(1, { damping: 15 }))}
+      onPressIn={() => scale.set(withSpring(0.88, { damping: 15 }))}
+      onPressOut={() => scale.set(withSpring(1, { damping: 15 }))}
       onPress={onPress}
       style={styles.tabButton}
     >
@@ -65,15 +66,16 @@ function TabButton({
 function Fab() {
   const router = useRouter();
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Add"
-      onPressIn={() => (scale.value = withSpring(0.9, { damping: 15 }))}
-      onPressOut={() => (scale.value = withSpring(1, { damping: 15 }))}
+      accessibilityLabel={t('common.add')}
+      onPressIn={() => scale.set(withSpring(0.9, { damping: 15 }))}
+      onPressOut={() => scale.set(withSpring(1, { damping: 15 }))}
       onPress={() => router.push('/quick-add')}
       style={styles.fabWrap}
     >
