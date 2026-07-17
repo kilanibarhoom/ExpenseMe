@@ -22,6 +22,8 @@ npm test          # jest unit tests (money, fx, debts, reports logic)
 npm run typecheck # tsc --noEmit
 ```
 
+> **Troubleshooting:** this repo lives under `~/Desktop`, which iCloud syncs. If a build fails at "[CP] Embed Pods Frameworks" with *"resource fork, Finder information, or similar detritus not allowed"*, make sure DerivedData is **outside** the repo (Xcode's default location works; never pass a repo-relative `-derivedDataPath`). iCloud re-stamps files inside the repo with Finder attributes that codesign rejects.
+
 ## Architecture
 
 ```
