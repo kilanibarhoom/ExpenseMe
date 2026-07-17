@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing, useThemeColors } from '@/lib/theme';
 
 /** Standard screen container: themed background, safe-area top, room for the floating tab bar. */
-export function Screen({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function Screen({ children, style }: { children?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   return (
