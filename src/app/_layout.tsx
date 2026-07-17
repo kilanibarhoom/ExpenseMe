@@ -13,7 +13,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <DbProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="quick-add"
+              options={{ presentation: 'modal', sheetGrabberVisible: true }}
+            />
+          </Stack>
         </DbProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
