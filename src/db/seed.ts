@@ -3,13 +3,16 @@ import { newId } from '@/lib/id';
 import { db } from './client';
 import { categories, settings } from './schema';
 
+// Expense colors are the pie chart's categorical palette — the set below
+// passes the dataviz six-checks validator (lightness band, chroma floor,
+// CVD separation, contrast) on both light and dark surfaces.
 const EXPENSE_SEED: [key: string, en: string, ar: string, icon: string, color: string][] = [
-  ['food_drinks', 'Food & Drinks', 'طعام ومشروبات', '🍔', '#F5A623'],
-  ['shopping', 'Shopping', 'تسوق', '🛍️', '#E5484D'],
-  ['transportation', 'Transportation', 'مواصلات', '🚗', '#3B82F6'],
-  ['internet', 'Internet', 'إنترنت', '🌐', '#8B5CF6'],
-  ['phone', 'Phone', 'هاتف', '📱', '#06B6D4'],
-  ['other', 'Other', 'أخرى', '📦', '#6B7280'],
+  ['food_drinks', 'Food & Drinks', 'طعام ومشروبات', '🍔', '#B45309'],
+  ['shopping', 'Shopping', 'تسوق', '🛍️', '#DC2626'],
+  ['transportation', 'Transportation', 'مواصلات', '🚗', '#2563EB'],
+  ['internet', 'Internet', 'إنترنت', '🌐', '#7C3AED'],
+  ['phone', 'Phone', 'هاتف', '📱', '#0D9488'],
+  ['other', 'Other', 'أخرى', '📦', '#4D7C0F'],
 ];
 
 const INCOME_SEED: [key: string, en: string, ar: string, icon: string, color: string][] = [

@@ -10,8 +10,10 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true
-      }
+        "CFBundleAllowMixedLocalizations": true,
+        "ExpoLocalization_supportsRTL": true
+      },
+      "bundleIdentifier": "com.anonymous.kilaniexpense"
     },
     "extra": {
       "supportsRTL": true
