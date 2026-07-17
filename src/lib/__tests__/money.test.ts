@@ -1,5 +1,6 @@
 import {
   CURRENCIES,
+  convertMinor,
   convertToIlsMinor,
   formatMoney,
   fromMinor,
@@ -75,6 +76,28 @@ describe('impliedRate', () => {
     expect(impliedRate(10000, 'JOD', 5100, 'ILS')).toBeCloseTo(5.1, 10);
     // 100 USD -> 360 ILS: 3.6
     expect(impliedRate(10000, 'USD', 36000, 'ILS')).toBeCloseTo(3.6, 10);
+  });
+});
+
+describe('convertMinor', () => {
+  const rates = { USD: 3.6, JOD: 5.2 };
+
+  it('converts USD to ILS via the rate table', () => {
+    expect(convertMinor(2500, 'USD', 'ILS', rates)).toBe(9000);
+  });
+
+  it('converts ILS to JOD across scales', () => {
+    // 520 ILS -> 100 JOD (100000 fils)
+    expect(convertMinor(52000, 'ILS', 'JOD', rates)).toBe(100000);
+  });
+
+  it('converts USD to JOD through ILS', () => {
+    // 52 USD = 187.2 ILS = 36 JOD = 36000 fils
+    expect(convertMinor(5200, 'USD', 'JOD', rates)).toBe(36000);
+  });
+
+  it('is the identity for same currency', () => {
+    expect(convertMinor(1234, 'USD', 'USD', rates)).toBe(1234);
   });
 });
 

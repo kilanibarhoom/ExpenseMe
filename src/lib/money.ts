@@ -58,6 +58,23 @@ export function convertToIlsMinor(
   return Math.round((foreignMinor * rateToIls * ilsFactor) / 10 ** minorScale(currency));
 }
 
+/**
+ * Convert between any two supported currencies through ILS using the cached
+ * rate table (ILS per 1 unit of USD/JOD). Used to prefill transfer amounts.
+ */
+export function convertMinor(
+  amountMinor: number,
+  from: Currency,
+  to: Currency,
+  rates: { USD: number; JOD: number },
+): number {
+  if (from === to) return amountMinor;
+  const ilsPer = (c: Currency) => (c === 'ILS' ? 1 : rates[c]);
+  const major = fromMinor(amountMinor, from);
+  const toMajor = (major * ilsPer(from)) / ilsPer(to);
+  return Math.round(toMajor * 10 ** minorScale(to));
+}
+
 /** Major-unit exchange rate implied by a cross-currency transfer: major(to) / major(from). */
 export function impliedRate(
   fromAmountMinor: number,
