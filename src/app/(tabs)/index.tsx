@@ -66,7 +66,9 @@ export default function HomeScreen() {
         </Card>
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.title')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: 0 }]}>
+            {t('home.title')}
+          </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('home.addAccount')}
