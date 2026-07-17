@@ -13,14 +13,16 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 import { perCurrencyTotals } from '@/features/debts/logic';
 import { useDebts } from '@/features/debts/queries';
 import { radii, spacing, useThemeColors } from '@/lib/theme';
+import { useDebounced } from '@/lib/useDebounced';
 
 export default function DebtsScreen() {
   const colors = useThemeColors();
   const { t } = useTranslation();
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounced(search);
   const [status, setStatus] = useState<'active' | 'completed'>('active');
-  const { debts, allActive } = useDebts({ search, status });
+  const { debts, allActive } = useDebts({ search: debouncedSearch, status });
   const totals = perCurrencyTotals(allActive);
 
   return (

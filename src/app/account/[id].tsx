@@ -16,9 +16,10 @@ import {
   updateAccount,
   useAccountsWithBalances,
 } from '@/features/accounts/queries';
-import { useActivity } from '@/features/transactions/queries';
+import { useActivity, useCategories } from '@/features/transactions/queries';
 import { formatMoney } from '@/lib/money';
 import { radii, spacing, useThemeColors } from '@/lib/theme';
+import { useDebounced } from '@/lib/useDebounced';
 
 type TypeFilter = 'all' | 'expense' | 'income';
 
@@ -30,11 +31,15 @@ export default function AccountDetailScreen() {
   const { data } = useAccountsWithBalances();
   const entry = data.find((a) => a.account.id === id);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounced(search);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const categories = useCategories(typeFilter === 'all' ? undefined : typeFilter);
   const { items } = useActivity({
     accountId: id,
-    search,
+    search: debouncedSearch,
     type: typeFilter === 'all' ? undefined : typeFilter,
+    categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
   });
 
   if (!entry) return <Screen />;
@@ -131,11 +136,25 @@ export default function AccountDetailScreen() {
             <View style={{ paddingHorizontal: spacing.l }}>
               <ChoiceChips
                 value={typeFilter}
-                onChange={setTypeFilter}
+                onChange={(v) => {
+                  setTypeFilter(v);
+                  setCategoryFilter('all');
+                }}
                 options={[
                   { value: 'all', label: t('common.all') },
                   { value: 'expense', label: t('quickAdd.expense') },
                   { value: 'income', label: t('quickAdd.income') },
+                ]}
+              />
+              <ChoiceChips
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={[
+                  { value: 'all', label: t('account.filterCategory') },
+                  ...categories.map((category) => ({
+                    value: category.id,
+                    label: `${category.icon} ${i18n.language === 'ar' ? category.labelAr : category.labelEn}`,
+                  })),
                 ]}
               />
             </View>
