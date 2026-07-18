@@ -1,11 +1,13 @@
+import { useQuery } from '@tanstack/react-query';
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 
 import { db } from '@/db/client';
 import { accounts, transactions, transfers, type Account } from '@/db/schema';
 import { newId } from '@/lib/id';
-import { useSettings } from '@/lib/settings-store';
 import type { Currency } from '@/lib/money';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
+import { useSettings } from '@/lib/settings-store';
 
 import { deriveBalance, type ActivitySums } from './logic';
 
@@ -32,26 +34,36 @@ function sumActivity(
   return sums;
 }
 
-/** Live list of non-archived accounts with derived balances (own currency, minor units). */
+/** List of non-archived accounts with derived balances (own currency, minor units). */
 export function useAccountsWithBalances(): { data: AccountWithBalance[]; loaded: boolean } {
-  const accountsQuery = useLiveQuery(
-    db.select().from(accounts).where(isNull(accounts.archivedAt)).orderBy(desc(accounts.isDefault), accounts.createdAt),
-  );
-  const txQuery = useLiveQuery(
-    db
-      .select({ accountId: transactions.accountId, type: transactions.type, amount: transactions.amount })
-      .from(transactions),
-  );
-  const trQuery = useLiveQuery(
-    db
-      .select({
-        fromAccountId: transfers.fromAccountId,
-        toAccountId: transfers.toAccountId,
-        fromAmount: transfers.fromAmount,
-        toAmount: transfers.toAmount,
-      })
-      .from(transfers),
-  );
+  const accountsQuery = useQuery({
+    queryKey: queryKeys.accounts,
+    queryFn: () =>
+      db
+        .select()
+        .from(accounts)
+        .where(isNull(accounts.archivedAt))
+        .orderBy(desc(accounts.isDefault), accounts.createdAt),
+  });
+  const txQuery = useQuery({
+    queryKey: queryKeys.transactionsForBalances,
+    queryFn: () =>
+      db
+        .select({ accountId: transactions.accountId, type: transactions.type, amount: transactions.amount })
+        .from(transactions),
+  });
+  const trQuery = useQuery({
+    queryKey: queryKeys.transfersForBalances,
+    queryFn: () =>
+      db
+        .select({
+          fromAccountId: transfers.fromAccountId,
+          toAccountId: transfers.toAccountId,
+          fromAmount: transfers.fromAmount,
+          toAmount: transfers.toAmount,
+        })
+        .from(transfers),
+  });
 
   const data = (accountsQuery.data ?? []).map((account) => ({
     account,
@@ -60,12 +72,15 @@ export function useAccountsWithBalances(): { data: AccountWithBalance[]; loaded:
       sumActivity(account.id, txQuery.data ?? [], trQuery.data ?? []),
     ),
   }));
-  return { data, loaded: accountsQuery.updatedAt !== undefined };
+  return { data, loaded: accountsQuery.data !== undefined };
 }
 
 export function useAccount(id: string): Account | undefined {
-  const { data } = useLiveQuery(db.select().from(accounts).where(eq(accounts.id, id)), [id]);
-  return data?.[0];
+  const { data } = useQuery({
+    queryKey: queryKeys.account(id),
+    queryFn: async () => (await db.select().from(accounts).where(eq(accounts.id, id)))[0],
+  });
+  return data;
 }
 
 export interface CreateAccountInput {
@@ -82,33 +97,33 @@ export async function createAccount(input: CreateAccountInput): Promise<string> 
   const id = newId();
   const existing = await db.select({ id: accounts.id }).from(accounts).limit(1);
   const makeDefault = input.makeDefault || existing.length === 0;
-  await db.transaction(async (tx) => {
-    if (makeDefault) {
-      await tx.update(accounts).set({ isDefault: false }).where(eq(accounts.isDefault, true));
-    }
-    await tx.insert(accounts).values({
-      id,
-      name: input.name,
-      type: input.type,
-      currency: input.currency,
-      initialBalance: input.initialBalanceMinor,
-      isDefault: makeDefault,
-      icon: input.icon,
-      color: input.color,
-    });
+  const insert = db.insert(accounts).values({
+    id,
+    name: input.name,
+    type: input.type,
+    currency: input.currency,
+    initialBalance: input.initialBalanceMinor,
+    isDefault: makeDefault,
+    icon: input.icon,
+    color: input.color,
   });
   if (makeDefault) {
+    await db.batch([db.update(accounts).set({ isDefault: false }).where(eq(accounts.isDefault, true)), insert]);
     await useSettings.getState().setDefaultAccountId(id);
+  } else {
+    await insert;
   }
+  await queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
   return id;
 }
 
 export async function setDefaultAccount(id: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.update(accounts).set({ isDefault: false }).where(eq(accounts.isDefault, true));
-    await tx.update(accounts).set({ isDefault: true, updatedAt: new Date() }).where(eq(accounts.id, id));
-  });
+  await db.batch([
+    db.update(accounts).set({ isDefault: false }).where(eq(accounts.isDefault, true)),
+    db.update(accounts).set({ isDefault: true, updatedAt: new Date() }).where(eq(accounts.id, id)),
+  ]);
   await useSettings.getState().setDefaultAccountId(id);
+  await queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
 }
 
 export async function updateAccount(
@@ -116,6 +131,8 @@ export async function updateAccount(
   patch: { name?: string; icon?: string; color?: string; type?: 'cash' | 'bank' },
 ): Promise<void> {
   await db.update(accounts).set({ ...patch, updatedAt: new Date() }).where(eq(accounts.id, id));
+  await queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.account(id) });
 }
 
 /** Spec rule 3: block archiving when the account has any activity. */
@@ -140,5 +157,7 @@ export async function archiveAccount(id: string): Promise<'ok' | 'blocked'> {
     .update(accounts)
     .set({ archivedAt: new Date(), isDefault: false, updatedAt: new Date() })
     .where(eq(accounts.id, id));
+  await queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.account(id) });
   return 'ok';
 }

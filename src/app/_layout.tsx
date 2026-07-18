@@ -1,14 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { DbProvider } from '@/db/DbProvider';
 import { useFxAutoRefresh } from '@/features/fx/refresh';
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 2, staleTime: 5 * 60 * 1000 } },
-});
+import { queryClient } from '@/lib/query-client';
 
 function FxAutoRefresh() {
   useFxAutoRefresh();

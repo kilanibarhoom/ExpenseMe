@@ -1,9 +1,10 @@
+import { useQuery } from '@tanstack/react-query';
 import { desc, eq } from 'drizzle-orm';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 
 import { db } from '@/db/client';
 import { categories, transactions, transfers } from '@/db/schema';
 import type { Currency } from '@/lib/money';
+import { queryKeys } from '@/lib/query-keys';
 
 export interface TxItem {
   kind: 'tx';
@@ -49,31 +50,36 @@ export interface ActivityFilter {
   includeTransfers?: boolean;
 }
 
-/** Live merged feed of transactions (+ optionally transfers), newest first. */
+/** Merged feed of transactions (+ optionally transfers), newest first. */
 export function useActivity(filter: ActivityFilter = {}): { items: ActivityItem[]; loaded: boolean } {
-  const txQuery = useLiveQuery(
-    db
-      .select({
-        id: transactions.id,
-        accountId: transactions.accountId,
-        type: transactions.type,
-        amount: transactions.amount,
-        currency: transactions.currency,
-        note: transactions.note,
-        occurredAt: transactions.occurredAt,
-        fxRateToIls: transactions.fxRateToIls,
-        categoryId: transactions.categoryId,
-        categoryKey: categories.key,
-        categoryLabelEn: categories.labelEn,
-        categoryLabelAr: categories.labelAr,
-        categoryIcon: categories.icon,
-        categoryColor: categories.color,
-      })
-      .from(transactions)
-      .leftJoin(categories, eq(transactions.categoryId, categories.id))
-      .orderBy(desc(transactions.occurredAt)),
-  );
-  const trQuery = useLiveQuery(db.select().from(transfers).orderBy(desc(transfers.occurredAt)));
+  const txQuery = useQuery({
+    queryKey: queryKeys.transactionsAll,
+    queryFn: () =>
+      db
+        .select({
+          id: transactions.id,
+          accountId: transactions.accountId,
+          type: transactions.type,
+          amount: transactions.amount,
+          currency: transactions.currency,
+          note: transactions.note,
+          occurredAt: transactions.occurredAt,
+          fxRateToIls: transactions.fxRateToIls,
+          categoryId: transactions.categoryId,
+          categoryKey: categories.key,
+          categoryLabelEn: categories.labelEn,
+          categoryLabelAr: categories.labelAr,
+          categoryIcon: categories.icon,
+          categoryColor: categories.color,
+        })
+        .from(transactions)
+        .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .orderBy(desc(transactions.occurredAt)),
+  });
+  const trQuery = useQuery({
+    queryKey: queryKeys.transfersAll,
+    queryFn: () => db.select().from(transfers).orderBy(desc(transfers.occurredAt)),
+  });
 
   const txItems: TxItem[] = (txQuery.data ?? []).map((row) => ({
     kind: 'tx',
@@ -137,15 +143,16 @@ export function useActivity(filter: ActivityFilter = {}): { items: ActivityItem[
   items.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
   if (filter.limit) items = items.slice(0, filter.limit);
 
-  return { items, loaded: txQuery.updatedAt !== undefined && trQuery.updatedAt !== undefined };
+  return { items, loaded: txQuery.data !== undefined && trQuery.data !== undefined };
 }
 
 export function useCategories(kind?: 'expense' | 'income') {
-  const query = useLiveQuery(
-    kind
-      ? db.select().from(categories).where(eq(categories.kind, kind)).orderBy(categories.sortOrder)
-      : db.select().from(categories).orderBy(categories.kind, categories.sortOrder),
-    [kind],
-  );
+  const query = useQuery({
+    queryKey: queryKeys.categories(kind),
+    queryFn: () =>
+      kind
+        ? db.select().from(categories).where(eq(categories.kind, kind)).orderBy(categories.sortOrder)
+        : db.select().from(categories).orderBy(categories.kind, categories.sortOrder),
+  });
   return query.data ?? [];
 }

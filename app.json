@@ -13,7 +13,7 @@
         "CFBundleAllowMixedLocalizations": true,
         "ExpoLocalization_supportsRTL": true
       },
-      "bundleIdentifier": "com.anonymous.kilaniexpense"
+      "bundleIdentifier": "com.ibrahimkilani.kilaniexpense"
     },
     "extra": {
       "supportsRTL": true

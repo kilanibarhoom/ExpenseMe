@@ -1,7 +1,12 @@
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { openDatabaseSync } from 'expo-sqlite';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 
 import * as schema from './schema';
 
-export const sqlite = openDatabaseSync('kilani.db', { enableChangeListener: true });
-export const db = drizzle(sqlite, { schema });
+const connectionString = process.env.EXPO_PUBLIC_DATABASE_URL;
+if (!connectionString) {
+  throw new Error('EXPO_PUBLIC_DATABASE_URL is not set');
+}
+
+const sql = neon(connectionString);
+export const db = drizzle(sql, { schema });

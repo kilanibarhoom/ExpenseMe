@@ -1,10 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
 import { desc, eq } from 'drizzle-orm';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 
 import { db } from '@/db/client';
 import { debtEntries, debts, type Debt, type DebtEntry } from '@/db/schema';
 import { newId } from '@/lib/id';
 import type { Currency } from '@/lib/money';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
 
 import { applyEntry } from './logic';
 
@@ -30,11 +32,12 @@ export async function createDebt(input: CreateDebtInput): Promise<string> {
     note: input.note?.trim() ? input.note.trim() : null,
     createdAt: input.occurredAt ?? new Date(),
   });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.debts });
   return id;
 }
 
 /**
- * Record a payment/increase and update the debt row in one DB transaction
+ * Record a payment/increase and update the debt row in one DB batch
  * (spec §10 data integrity — remaining/status recomputed atomically).
  */
 export async function addDebtEntry(
@@ -47,32 +50,36 @@ export async function addDebtEntry(
   if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
     throw new Error('Amount must be a positive integer of minor units');
   }
-  await db.transaction(async (tx) => {
-    const [debt] = await tx.select().from(debts).where(eq(debts.id, debtId));
-    if (!debt) throw new Error('Debt not found');
-    const next = applyEntry(
-      { principal: debt.principalAmount, remaining: debt.remainingAmount, status: debt.status },
-      { kind, amount: amountMinor },
-    );
-    await tx.insert(debtEntries).values({
+  const [debt] = await db.select().from(debts).where(eq(debts.id, debtId));
+  if (!debt) throw new Error('Debt not found');
+  const next = applyEntry(
+    { principal: debt.principalAmount, remaining: debt.remainingAmount, status: debt.status },
+    { kind, amount: amountMinor },
+  );
+  await db.batch([
+    db.insert(debtEntries).values({
       id: newId(),
       debtId,
       kind,
       amount: amountMinor,
       note: note?.trim() ? note.trim() : null,
       occurredAt: occurredAt ?? new Date(),
-    });
-    await tx
+    }),
+    db
       .update(debts)
       .set({
         principalAmount: next.principal,
         remainingAmount: next.remaining,
         status: next.status,
-        completedAt:
-          next.status === 'completed' ? (debt.completedAt ?? new Date()) : null,
+        completedAt: next.status === 'completed' ? (debt.completedAt ?? new Date()) : null,
       })
-      .where(eq(debts.id, debtId));
-  });
+      .where(eq(debts.id, debtId)),
+  ]);
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.debts }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.debt(debtId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.debtEntries(debtId) }),
+  ]);
 }
 
 /** "Full Pay": one payment equal to remaining → remaining 0, completed (spec rule 6). */
@@ -83,17 +90,25 @@ export async function fullPay(debtId: string): Promise<void> {
 }
 
 export async function deleteDebt(debtId: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.delete(debtEntries).where(eq(debtEntries.debtId, debtId));
-    await tx.delete(debts).where(eq(debts.id, debtId));
-  });
+  await db.batch([
+    db.delete(debtEntries).where(eq(debtEntries.debtId, debtId)),
+    db.delete(debts).where(eq(debts.id, debtId)),
+  ]);
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.debts }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.debt(debtId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.debtEntries(debtId) }),
+  ]);
 }
 
 export function useDebts(filter: { search: string; status: 'active' | 'completed' }): {
   debts: Debt[];
   allActive: Debt[];
 } {
-  const query = useLiveQuery(db.select().from(debts).orderBy(desc(debts.createdAt)));
+  const query = useQuery({
+    queryKey: queryKeys.debts,
+    queryFn: () => db.select().from(debts).orderBy(desc(debts.createdAt)),
+  });
   const all = query.data ?? [];
   const q = filter.search.trim().toLowerCase();
   return {
@@ -105,10 +120,14 @@ export function useDebts(filter: { search: string; status: 'active' | 'completed
 }
 
 export function useDebt(id: string): { debt: Debt | undefined; entries: DebtEntry[] } {
-  const debtQuery = useLiveQuery(db.select().from(debts).where(eq(debts.id, id)), [id]);
-  const entriesQuery = useLiveQuery(
-    db.select().from(debtEntries).where(eq(debtEntries.debtId, id)).orderBy(desc(debtEntries.occurredAt)),
-    [id],
-  );
+  const debtQuery = useQuery({
+    queryKey: queryKeys.debt(id),
+    queryFn: () => db.select().from(debts).where(eq(debts.id, id)),
+  });
+  const entriesQuery = useQuery({
+    queryKey: queryKeys.debtEntries(id),
+    queryFn: () =>
+      db.select().from(debtEntries).where(eq(debtEntries.debtId, id)).orderBy(desc(debtEntries.occurredAt)),
+  });
   return { debt: debtQuery.data?.[0], entries: entriesQuery.data ?? [] };
 }

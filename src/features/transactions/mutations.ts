@@ -2,6 +2,8 @@ import { db } from '@/db/client';
 import { transactions, transfers } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { impliedRate, type Currency } from '@/lib/money';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
 
 import {
   expenseIncomeSchema,
@@ -10,6 +12,14 @@ import {
   type ExpenseIncomeInput,
   type TransferInput,
 } from './validation';
+
+async function invalidateAccountsAndTransactions(): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsAll }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsForBalances }),
+  ]);
+}
 
 /** Insert a validated expense/income row, snapshotting the FX rate for non-ILS. */
 export async function addTransaction(
@@ -28,6 +38,7 @@ export async function addTransaction(
     occurredAt: parsed.occurredAt,
     fxRateToIls: fxSnapshotFor(input.currency, rates),
   });
+  await invalidateAccountsAndTransactions();
 }
 
 /** Insert a validated transfer, storing the implied rate when currencies differ. */
@@ -48,4 +59,9 @@ export async function addTransfer(input: TransferInput): Promise<void> {
     note: parsed.note?.trim() ? parsed.note.trim() : null,
     occurredAt: parsed.occurredAt,
   });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.transfersAll }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.transfersForBalances }),
+  ]);
 }
