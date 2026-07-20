@@ -1,4 +1,4 @@
-import { Button as SwiftUIButton, Host } from '@expo/ui/swift-ui';
+import { Button as SwiftUIButton, Host } from "@expo/ui/swift-ui";
 import {
   buttonBorderShape,
   buttonStyle,
@@ -7,12 +7,12 @@ import {
   frame,
   labelStyle,
   tint,
-} from '@expo/ui/swift-ui/modifiers';
-import type { SFSymbol } from 'sf-symbols-typescript';
-import { Ionicons } from '@expo/vector-icons';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+} from "@expo/ui/swift-ui/modifiers";
+import type { SFSymbol } from "sf-symbols-typescript";
+import { Ionicons } from "@expo/vector-icons";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { radii, spacing, useThemeColors } from '@/lib/theme';
+import { radii, spacing, useThemeColors } from "@/lib/theme";
 
 interface NativeButtonProps {
   title: string;
@@ -44,7 +44,7 @@ export function NativeButton({
   const colors = useThemeColors();
   const resolvedTint = tintColor ?? colors.blue;
 
-  if (Platform.OS === 'ios') {
+  if (Platform.OS === "ios") {
     return (
       <Host matchContents style={styles.host}>
         <SwiftUIButton
@@ -52,8 +52,8 @@ export function NativeButton({
           systemImage={systemImage}
           onPress={onPress}
           modifiers={[
-            buttonStyle('borderedProminent'),
-            controlSize('regular'),
+            buttonStyle("glassProminent"),
+            controlSize("regular"),
             tint(resolvedTint),
             disabledModifier(!!disabled),
           ]}
@@ -68,10 +68,15 @@ export function NativeButton({
       accessibilityLabel={accessibilityLabel ?? title}
       onPress={onPress}
       disabled={disabled}
-      style={[styles.fallback, { backgroundColor: resolvedTint, opacity: disabled ? 0.5 : 1 }]}
+      style={[
+        styles.fallback,
+        { backgroundColor: resolvedTint, opacity: disabled ? 0.5 : 1 },
+      ]}
     >
       <View style={styles.fallbackRow}>
-        {fallbackIcon && <Ionicons name={fallbackIcon} size={16} color="#FFFFFF" />}
+        {fallbackIcon && (
+          <Ionicons name={fallbackIcon} size={16} color="#FFFFFF" />
+        )}
         <Text style={styles.fallbackLabel}>{title}</Text>
       </View>
     </Pressable>
@@ -102,7 +107,7 @@ export function NativeIconButton({
   const colors = useThemeColors();
   const resolvedTint = tintColor ?? colors.blue;
 
-  if (Platform.OS === 'ios') {
+  if (Platform.OS === "ios") {
     return (
       <Host matchContents style={styles.host}>
         <SwiftUIButton
@@ -110,9 +115,9 @@ export function NativeIconButton({
           systemImage={systemImage}
           onPress={onPress}
           modifiers={[
-            buttonStyle('borderedProminent'),
-            buttonBorderShape('circle'),
-            labelStyle('iconOnly'),
+            buttonStyle("borderedProminent"),
+            buttonBorderShape("circle"),
+            labelStyle("iconOnly"),
             tint(resolvedTint),
             frame({ width: size, height: size }),
           ]}
@@ -128,7 +133,12 @@ export function NativeIconButton({
       onPress={onPress}
       style={[
         styles.iconFallback,
-        { backgroundColor: resolvedTint, width: size, height: size, borderRadius: size / 2 },
+        {
+          backgroundColor: resolvedTint,
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+        },
       ]}
     >
       <Ionicons name={fallbackIcon} size={20} color="#FFFFFF" />
@@ -137,15 +147,15 @@ export function NativeIconButton({
 }
 
 const styles = StyleSheet.create({
-  host: { alignSelf: 'flex-start' },
+  host: { alignSelf: "flex-start" },
   fallback: {
     borderRadius: radii.control,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  fallbackRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  fallbackLabel: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  iconFallback: { alignItems: 'center', justifyContent: 'center' },
+  fallbackRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  fallbackLabel: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  iconFallback: { alignItems: "center", justifyContent: "center" },
 });
