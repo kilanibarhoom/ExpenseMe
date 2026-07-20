@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784397511699,
+      "tag": "0000_naive_black_widow",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784412000000,
+      "tag": "0001_rename_initial_balance_to_balance",
+      "breakpoints": true
+    }
+  ]
+}

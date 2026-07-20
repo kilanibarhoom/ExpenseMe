@@ -8,6 +8,13 @@
       "when": 1784310080258,
       "tag": "0000_pale_marvex",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784412000000,
+      "tag": "0001_rename_initial_balance_to_balance",
+      "breakpoints": true
     }
   ]
 }
