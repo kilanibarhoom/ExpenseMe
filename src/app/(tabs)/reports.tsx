@@ -90,7 +90,12 @@ export default function ReportsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
         <Text style={[styles.title, { color: colors.text }]}>{t('reports.title')}</Text>
 
         <Card style={styles.totalCard}>

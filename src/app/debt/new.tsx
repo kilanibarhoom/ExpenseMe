@@ -67,6 +67,9 @@ export default function NewDebtScreen() {
           { paddingTop: insets.top + spacing.l, paddingBottom: insets.bottom + spacing.xl },
         ]}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
       >
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('common.cancel')} onPress={() => router.back()}>

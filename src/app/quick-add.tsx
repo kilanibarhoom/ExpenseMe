@@ -250,6 +250,9 @@ export default function QuickAddScreen() {
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
         >
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.text }]}>

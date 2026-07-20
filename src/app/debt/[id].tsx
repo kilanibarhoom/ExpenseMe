@@ -82,7 +82,12 @@ export default function DebtDetailScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
         <Card style={[styles.topCard, { backgroundColor: owedToMe ? colors.greenSoft : colors.redSoft }]}>
           <View style={[styles.topIcon, { backgroundColor: colors.card }]}>
             <Ionicons

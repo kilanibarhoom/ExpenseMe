@@ -104,7 +104,12 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
         <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
 
         <SectionTitle>{t('settings.defaultAccount')}</SectionTitle>

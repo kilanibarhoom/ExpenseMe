@@ -84,6 +84,9 @@ export default function NewAccountScreen() {
           { paddingTop: insets.top + spacing.l, paddingBottom: insets.bottom + spacing.xl },
         ]}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
       >
         <View style={styles.header}>
           {!isFirst && (
