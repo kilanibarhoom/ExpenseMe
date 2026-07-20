@@ -3,13 +3,26 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/Card';
-import type { Account } from '@/db/schema';
-import { formatMoney } from '@/lib/money';
+import type { LocalAccount as Account } from '@/db/local-schema';
+import { convertToIlsMinor, formatMoney } from '@/lib/money';
 import { spacing, useThemeColors } from '@/lib/theme';
 
-export function AccountCard({ account, balanceMinor }: { account: Account; balanceMinor: number }) {
+export function AccountCard({
+  account,
+  balanceMinor,
+  rates,
+}: {
+  account: Account;
+  balanceMinor: number;
+  /** ILS-per-unit rates; when given, foreign-currency wallets show a converted line. */
+  rates?: { USD: number; JOD: number };
+}) {
   const colors = useThemeColors();
   const { t, i18n } = useTranslation();
+  const convertedIlsMinor =
+    rates && account.currency !== 'ILS'
+      ? convertToIlsMinor(balanceMinor, account.currency, rates[account.currency])
+      : null;
   return (
     <Card style={styles.card}>
       <View style={[styles.iconWrap, { backgroundColor: account.color ?? colors.chip }]}>
@@ -35,9 +48,16 @@ export function AccountCard({ account, balanceMinor }: { account: Account; balan
         </Text>
       </View>
       <View style={styles.balanceWrap}>
-        <Text style={[styles.balance, { color: colors.text }]}>
-          {formatMoney(balanceMinor, account.currency, i18n.language)}
-        </Text>
+        <View style={styles.balanceColumn}>
+          <Text style={[styles.balance, { color: colors.text }]}>
+            {formatMoney(balanceMinor, account.currency, i18n.language)}
+          </Text>
+          {convertedIlsMinor !== null && (
+            <Text style={[styles.converted, { color: colors.textMuted }]}>
+              ≈ {formatMoney(convertedIlsMinor, 'ILS', i18n.language)}
+            </Text>
+          )}
+        </View>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={styles.chevron} />
       </View>
     </Card>
@@ -61,6 +81,8 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '700' },
   currency: { fontSize: 12 },
   balanceWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  balanceColumn: { alignItems: 'flex-end', gap: 1 },
   balance: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  converted: { fontSize: 11, fontVariant: ['tabular-nums'] },
   chevron: { transform: [{ scaleX: 1 }] },
 });

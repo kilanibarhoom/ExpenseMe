@@ -1,38 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/Card';
-import { PrimaryButton, TextField } from '@/components/form';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/Screen';
-import { addDebtEntry, deleteDebt, fullPay, useDebt } from '@/features/debts/queries';
-import { formatMoney, toMinor } from '@/lib/money';
+import { deleteDebt, deleteDebtEntry, fullPay, useDebt } from '@/features/debts/queries';
+import { formatMoney } from '@/lib/money';
 import { radii, spacing, useThemeColors } from '@/lib/theme';
-
-type EntryModal = { kind: 'payment' | 'increase' } | null;
 
 export default function DebtDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors();
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { debt, entries } = useDebt(id);
-  const [modal, setModal] = useState<EntryModal>(null);
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [amountError, setAmountError] = useState<string | undefined>();
 
   if (!debt) return <Screen />;
   const owedToMe = debt.direction === 'owed_to_me';
@@ -53,6 +35,17 @@ export default function DebtDetailScreen() {
     ]);
   };
 
+  const confirmDeleteEntry = (entryId: string) => {
+    Alert.alert(t('debts.deleteEntryTitle'), t('debts.deleteEntryBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => void deleteDebtEntry(entryId, debt.id),
+      },
+    ]);
+  };
+
   const confirmFullPay = () => {
     Alert.alert(
       t('debts.fullPayConfirmTitle'),
@@ -66,21 +59,6 @@ export default function DebtDetailScreen() {
     );
   };
 
-  const submitEntry = async () => {
-    if (!modal) return;
-    try {
-      const amountMinor = toMinor(amount, debt.currency);
-      if (amountMinor <= 0) throw new Error('zero');
-      setAmountError(undefined);
-      await addDebtEntry(debt.id, modal.kind, amountMinor, note || undefined);
-      setModal(null);
-      setAmount('');
-      setNote('');
-    } catch {
-      setAmountError(t('quickAdd.errPositive'));
-    }
-  };
-
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 
   return (
@@ -92,6 +70,13 @@ export default function DebtDetailScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           {debt.personName}
         </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.edit')}
+          onPress={() => router.push({ pathname: '/debt/edit', params: { debtId: debt.id } })}
+        >
+          <Ionicons name="pencil" size={20} color={colors.text} />
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.delete')} onPress={confirmDelete}>
           <Ionicons name="trash-outline" size={22} color={colors.red} />
         </Pressable>
@@ -122,7 +107,7 @@ export default function DebtDetailScreen() {
           <View style={styles.actionsRow}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setModal({ kind: 'payment' })}
+              onPress={() => router.push({ pathname: '/debt/entry', params: { debtId: debt.id, kind: 'payment' } })}
               style={[styles.action, { backgroundColor: colors.card }]}
             >
               <Ionicons name="cash-outline" size={20} color={colors.green} />
@@ -138,7 +123,7 @@ export default function DebtDetailScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setModal({ kind: 'increase' })}
+              onPress={() => router.push({ pathname: '/debt/entry', params: { debtId: debt.id, kind: 'increase' } })}
               style={[styles.action, { backgroundColor: colors.card }]}
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.red} />
@@ -174,7 +159,13 @@ export default function DebtDetailScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('debts.entryHistory')}</Text>
             <Card style={styles.detailsCard}>
               {entries.map((entry) => (
-                <View key={entry.id} style={styles.entryRow}>
+                <Pressable
+                  key={entry.id}
+                  accessibilityRole="button"
+                  accessibilityHint={t('debts.deleteEntryHint')}
+                  onLongPress={() => confirmDeleteEntry(entry.id)}
+                  style={styles.entryRow}
+                >
                   <Ionicons
                     name={entry.kind === 'payment' ? 'remove-circle-outline' : 'add-circle-outline'}
                     size={20}
@@ -198,44 +189,15 @@ export default function DebtDetailScreen() {
                     {entry.kind === 'payment' ? '−' : '+'}
                     {formatMoney(entry.amount, debt.currency, locale)}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </Card>
+            <Text style={[styles.entryHint, { color: colors.textMuted }]}>
+              {t('debts.deleteEntryHint')}
+            </Text>
           </>
         )}
       </ScrollView>
-
-      <Modal visible={modal !== null} transparent animationType="slide" onRequestClose={() => setModal(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setModal(null)} />
-        <View
-          style={[
-            styles.modalSheet,
-            { backgroundColor: colors.card, paddingBottom: insets.bottom + spacing.xl },
-          ]}
-        >
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
-            {modal?.kind === 'payment' ? t('debts.paymentTitle') : t('debts.increaseTitle')}
-          </Text>
-          <TextField
-            label={`${t('common.amount')} (${debt.currency})`}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-            error={amountError}
-            autoFocus
-          />
-          <TextField
-            label={`${t('common.note')} (${t('common.optional')})`}
-            value={note}
-            onChangeText={setNote}
-          />
-          <PrimaryButton
-            title={modal?.kind === 'payment' ? t('debts.payment') : t('debts.increase')}
-            onPress={submitEntry}
-          />
-        </View>
-      </Modal>
     </Screen>
   );
 }
@@ -284,11 +246,5 @@ const styles = StyleSheet.create({
   entryKind: { fontSize: 14, fontWeight: '600' },
   entryDate: { fontSize: 12 },
   entryAmount: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: {
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-    padding: spacing.xl,
-  },
-  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: spacing.l },
+  entryHint: { fontSize: 12, paddingHorizontal: spacing.l, marginTop: spacing.s },
 });

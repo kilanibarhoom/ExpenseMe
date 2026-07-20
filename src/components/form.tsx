@@ -74,7 +74,9 @@ export function ChoiceChips<T extends string>({
       <View style={styles.chipsRow}>
         {options.map((opt) => {
           const active = opt.value === value;
-          const activeColor = colorFor?.(opt.value) ?? colors.chipActive;
+          const tint = colorFor?.(opt.value);
+          const activeColor = tint ?? colors.chipActive;
+          const activeTextColor = tint ? '#FFFFFF' : colors.chipActiveText;
           return (
             <Pressable
               key={opt.value}
@@ -83,7 +85,7 @@ export function ChoiceChips<T extends string>({
               onPress={() => onChange(opt.value)}
               style={[styles.chip, { backgroundColor: active ? activeColor : colors.chip }]}
             >
-              <Text style={[styles.chipText, { color: active ? '#FFFFFF' : colors.text }]}>
+              <Text style={[styles.chipText, { color: active ? activeTextColor : colors.text }]}>
                 {opt.label}
               </Text>
             </Pressable>

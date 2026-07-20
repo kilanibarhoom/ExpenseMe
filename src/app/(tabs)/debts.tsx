@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { DebtRow } from '@/components/DebtRow';
 import { DebtSummaryCards } from '@/components/DebtSummaryCards';
 import { EmptyState } from '@/components/EmptyState';
+import { NativeIconButton } from '@/components/NativeButton';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { perCurrencyTotals } from '@/features/debts/logic';
@@ -77,14 +78,15 @@ export default function DebtsScreen() {
         }
       />
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('common.add')}
-        onPress={() => router.push('/debt/new')}
-        style={[styles.fab, { backgroundColor: colors.blue }]}
-      >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </Pressable>
+      <View style={styles.fabWrap}>
+        <NativeIconButton
+          systemImage="plus"
+          fallbackIcon="add"
+          size={52}
+          accessibilityLabel={t('common.add')}
+          onPress={() => router.push('/debt/new')}
+        />
+      </View>
     </Screen>
   );
 }
@@ -103,19 +105,9 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 15 },
   headerBlock: { marginBottom: spacing.m },
   rowWrap: { paddingHorizontal: spacing.l, paddingTop: spacing.m },
-  fab: {
+  fabWrap: {
     position: 'absolute',
     bottom: TAB_BAR_CLEARANCE,
     right: spacing.xl,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
   },
 });

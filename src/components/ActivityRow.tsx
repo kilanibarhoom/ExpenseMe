@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { ActivityItem } from '@/features/transactions/queries';
@@ -17,19 +18,30 @@ function formatDay(date: Date, locale: string): string {
 export function ActivityRow({
   item,
   perspectiveAccountId,
+  onPress,
 }: {
   item: ActivityItem;
   perspectiveAccountId?: string;
+  onPress?: () => void;
 }) {
   const colors = useThemeColors();
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
+  const Container = ({ children }: { children: ReactNode }) =>
+    onPress ? (
+      <Pressable accessibilityRole="button" onPress={onPress} style={styles.row}>
+        {children}
+      </Pressable>
+    ) : (
+      <View style={styles.row}>{children}</View>
+    );
+
   if (item.kind === 'tx') {
     const isExpense = item.type === 'expense';
     const label = (locale === 'ar' ? item.categoryLabelAr : item.categoryLabelEn) ?? '';
     return (
-      <View style={styles.row}>
+      <Container>
         <View style={[styles.iconWrap, { backgroundColor: (item.categoryColor ?? colors.chip) + '22' }]}>
           <Text style={styles.icon}>{item.categoryIcon ?? '💸'}</Text>
         </View>
@@ -45,7 +57,7 @@ export function ActivityRow({
           {isExpense ? '−' : '+'}
           {formatMoney(item.amountMinor, item.currency, locale)}
         </Text>
-      </View>
+      </Container>
     );
   }
 
@@ -58,7 +70,7 @@ export function ActivityRow({
       : `${formatMoney(item.fromAmountMinor, item.fromCurrency, locale)} → ${formatMoney(item.toAmountMinor, item.toCurrency, locale)}`;
 
   return (
-    <View style={styles.row}>
+    <Container>
       <View style={[styles.iconWrap, { backgroundColor: colors.chip }]}>
         <Text style={styles.icon}>🔁</Text>
       </View>
@@ -73,7 +85,7 @@ export function ActivityRow({
       <Text style={[styles.amount, { color: outgoing ? colors.red : incoming ? colors.green : colors.textMuted }]}>
         {amountText}
       </Text>
-    </View>
+    </Container>
   );
 }
 

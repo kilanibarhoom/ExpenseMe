@@ -30,6 +30,29 @@ export function applyEntry(
   };
 }
 
+/**
+ * Recompute a debt snapshot from scratch by folding its entries in chronological
+ * order over `applyEntry`, starting from the original principal. Used when an entry
+ * is deleted (or otherwise mutated), since payments clamp at 0 and increases raise
+ * principal — so the running total can only be rebuilt, not adjusted in place.
+ *
+ * `entries` must be ordered oldest-first (the order they were originally applied).
+ */
+export function foldEntries(
+  originalPrincipal: number,
+  entries: { kind: 'payment' | 'increase'; amount: number }[],
+): DebtSnapshot {
+  let snapshot: DebtSnapshot = {
+    principal: originalPrincipal,
+    remaining: originalPrincipal,
+    status: originalPrincipal === 0 ? 'completed' : 'active',
+  };
+  for (const entry of entries) {
+    snapshot = applyEntry(snapshot, entry);
+  }
+  return snapshot;
+}
+
 /** Spec rule 8: per-currency summary buckets — never converted. */
 export function perCurrencyTotals(
   debts: { direction: 'i_owe' | 'owed_to_me'; currency: Currency; remainingAmount: number }[],

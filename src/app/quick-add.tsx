@@ -1,7 +1,8 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,9 +19,20 @@ import { FieldLabel, PrimaryButton, TextField } from '@/components/form';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { useAccountsWithBalances } from '@/features/accounts/queries';
 import { useFxRates } from '@/features/fx/useFxRates';
-import { addTransaction, addTransfer } from '@/features/transactions/mutations';
-import { useCategories } from '@/features/transactions/queries';
-import type { Account } from '@/db/schema';
+import {
+  addTransaction,
+  addTransfer,
+  deleteTransaction,
+  deleteTransfer,
+  updateTransaction,
+  updateTransfer,
+} from '@/features/transactions/mutations';
+import {
+  useCategories,
+  useTransactionForEdit,
+  useTransferForEdit,
+} from '@/features/transactions/queries';
+import type { LocalAccount as Account } from '@/db/local-schema';
 import { convertMinor, fromMinor, toMinor } from '@/lib/money';
 import { radii, spacing, useThemeColors } from '@/lib/theme';
 import { useSettings } from '@/lib/settings-store';
@@ -78,6 +90,12 @@ export default function QuickAddScreen() {
   const { data: accountData } = useAccountsWithBalances();
   const accounts = accountData.map((a) => a.account);
 
+  const params = useLocalSearchParams<{ id?: string; kind?: 'tx' | 'transfer' }>();
+  const editId = params.id;
+  const isEdit = !!editId;
+  const editTx = useTransactionForEdit(params.kind === 'tx' ? editId : undefined);
+  const editTransfer = useTransferForEdit(params.kind === 'transfer' ? editId : undefined);
+
   const [mode, setMode] = useState<Mode>('expense');
   const categories = useCategories(mode === 'transfer' ? undefined : mode);
 
@@ -91,6 +109,52 @@ export default function QuickAddScreen() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Prefill the form once when editing an existing record.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current) return;
+    if (params.kind === 'tx' && editTx) {
+      prefilled.current = true;
+      setMode(editTx.type);
+      setAccountId(editTx.accountId);
+      setCategoryId(editTx.categoryId);
+      setAmount(String(fromMinor(editTx.amount, editTx.currency)));
+      setNote(editTx.note ?? '');
+      setOccurredAt(editTx.occurredAt);
+    } else if (params.kind === 'transfer' && editTransfer) {
+      prefilled.current = true;
+      setMode('transfer');
+      setAccountId(editTransfer.fromAccountId);
+      setToAccountId(editTransfer.toAccountId);
+      setAmount(String(fromMinor(editTransfer.fromAmount, editTransfer.fromCurrency)));
+      setToAmount(String(fromMinor(editTransfer.toAmount, editTransfer.toCurrency)));
+      setToAmountTouched(true);
+      setNote(editTransfer.note ?? '');
+      setOccurredAt(editTransfer.occurredAt);
+    }
+  }, [params.kind, editTx, editTransfer]);
+
+  const confirmDelete = () => {
+    if (!editId) return;
+    const isTransfer = params.kind === 'transfer';
+    Alert.alert(
+      isTransfer ? t('quickAdd.deleteTransferTitle') : t('quickAdd.deleteTransactionTitle'),
+      t('quickAdd.deleteBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (isTransfer) await deleteTransfer(editId);
+            else await deleteTransaction(editId);
+            router.back();
+          },
+        },
+      ],
+    );
+  };
 
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
   const toAccount = accounts.find((a) => a.id === toAccountId);
@@ -127,7 +191,7 @@ export default function QuickAddScreen() {
             ? fromAmountMinor
             : toMinor(toAmount, toAccount.currency);
         setSaving(true);
-        await addTransfer({
+        const transferInput = {
           fromAccountId: account.id,
           toAccountId: toAccount.id,
           fromCurrency: account.currency,
@@ -136,7 +200,9 @@ export default function QuickAddScreen() {
           toAmountMinor,
           occurredAt,
           note: note || undefined,
-        });
+        };
+        if (isEdit && editId) await updateTransfer(editId, transferInput);
+        else await addTransfer(transferInput);
       } else {
         if (!categoryId) {
           setError(t('quickAdd.errNoCategory'));
@@ -144,18 +210,17 @@ export default function QuickAddScreen() {
         }
         const amountMinor = toMinor(amount, account.currency);
         setSaving(true);
-        await addTransaction(
-          {
-            accountId: account.id,
-            type: mode,
-            categoryId,
-            amountMinor,
-            occurredAt,
-            note: note || undefined,
-            currency: account.currency,
-          },
-          rates,
-        );
+        const txInput = {
+          accountId: account.id,
+          type: mode,
+          categoryId,
+          amountMinor,
+          occurredAt,
+          note: note || undefined,
+          currency: account.currency,
+        };
+        if (isEdit && editId) await updateTransaction(editId, txInput, rates);
+        else await addTransaction(txInput, rates);
       }
       router.back();
     } catch (e) {
@@ -180,34 +245,36 @@ export default function QuickAddScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.screen, { backgroundColor: colors.bg }]}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
-        keyboardShouldPersistTaps="handled"
-      >
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('quickAdd.title')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isEdit ? t('quickAdd.editTitle') : t('quickAdd.title')}
+          </Text>
           <Pressable accessibilityRole="button" accessibilityLabel={t('common.cancel')} onPress={() => router.back()}>
             <Text style={[styles.cancel, { color: colors.textMuted }]}>{t('common.cancel')}</Text>
           </Pressable>
         </View>
 
-        <SegmentedControl<Mode>
-          value={mode}
-          onChange={(m) => {
-            setMode(m);
-            setCategoryId(null);
-            setError(null);
-          }}
-          options={[
-            { value: 'expense', label: t('quickAdd.expense'), tint: colors.red },
-            { value: 'income', label: t('quickAdd.income'), tint: colors.green },
-            { value: 'transfer', label: t('quickAdd.transfer'), tint: colors.blue },
-          ]}
-        />
+        {!isEdit && (
+          <SegmentedControl<Mode>
+            value={mode}
+            onChange={(m) => {
+              setMode(m);
+              setCategoryId(null);
+              setError(null);
+            }}
+            options={[
+              { value: 'expense', label: t('quickAdd.expense'), tint: colors.red },
+              { value: 'income', label: t('quickAdd.income'), tint: colors.green },
+              { value: 'transfer', label: t('quickAdd.transfer'), tint: colors.blue },
+            ]}
+          />
+        )}
 
         <View style={{ height: spacing.xl }} />
 
@@ -224,6 +291,7 @@ export default function QuickAddScreen() {
               <View style={styles.categoryGrid}>
                 {visibleCategories.map((category) => {
                   const active = category.id === categoryId;
+                  const activeTextColor = category.color ? '#FFFFFF' : colors.chipActiveText;
                   return (
                     <Pressable
                       key={category.id}
@@ -240,7 +308,7 @@ export default function QuickAddScreen() {
                       <Text style={styles.categoryEmoji}>{category.icon}</Text>
                       <Text
                         numberOfLines={1}
-                        style={[styles.categoryLabel, { color: active ? '#FFFFFF' : colors.text }]}
+                        style={[styles.categoryLabel, { color: active ? activeTextColor : colors.text }]}
                       >
                         {i18n.language === 'ar' ? category.labelAr : category.labelEn}
                       </Text>
@@ -338,8 +406,23 @@ export default function QuickAddScreen() {
           </Text>
         )}
         <PrimaryButton title={t('common.save')} onPress={save} disabled={saving} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        {isEdit && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={confirmDelete}
+            disabled={saving}
+            style={styles.deleteButton}
+          >
+            <Text style={[styles.deleteLabel, { color: colors.red }]}>
+              {params.kind === 'transfer'
+                ? t('quickAdd.deleteTransfer')
+                : t('quickAdd.deleteTransaction')}
+            </Text>
+          </Pressable>
+        )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -377,4 +460,6 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 12, marginTop: -spacing.m, marginBottom: spacing.l },
   error: { fontSize: 14, fontWeight: '600', marginBottom: spacing.m, textAlign: 'center' },
+  deleteButton: { alignItems: 'center', paddingVertical: spacing.l, marginTop: spacing.s },
+  deleteLabel: { fontSize: 15, fontWeight: '700' },
 });

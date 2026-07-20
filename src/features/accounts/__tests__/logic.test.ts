@@ -1,22 +1,4 @@
-import { combinedIlsMinor, deriveBalance } from '../logic';
-
-describe('deriveBalance', () => {
-  it('adds income and transfers-in, subtracts expense and transfers-out', () => {
-    expect(
-      deriveBalance(10000, { income: 5000, expense: 2000, transfersIn: 1000, transfersOut: 500 }),
-    ).toBe(13500);
-  });
-
-  it('handles empty activity', () => {
-    expect(deriveBalance(0, { income: 0, expense: 0, transfersIn: 0, transfersOut: 0 })).toBe(0);
-  });
-
-  it('can go negative', () => {
-    expect(deriveBalance(0, { income: 0, expense: 700, transfersIn: 0, transfersOut: 0 })).toBe(
-      -700,
-    );
-  });
-});
+import { combinedIlsMinor } from '../logic';
 
 describe('combinedIlsMinor', () => {
   const rates = { USD: 3.6, JOD: 5.2 };

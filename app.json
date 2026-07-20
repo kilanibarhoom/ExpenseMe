@@ -13,7 +13,8 @@
         "CFBundleAllowMixedLocalizations": true,
         "ExpoLocalization_supportsRTL": true
       },
-      "bundleIdentifier": "com.ibrahimkilani.kilaniexpense"
+      "bundleIdentifier": "com.ibrahimkilani.kilaniexpense",
+      "appleTeamId": "6F7233XJMJ"
     },
     "extra": {
       "supportsRTL": true
@@ -37,14 +38,15 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 76
         }
       ],
       "expo-sqlite",
       "expo-localization",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,

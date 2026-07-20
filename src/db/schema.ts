@@ -31,7 +31,7 @@ export const accounts = pgTable('accounts', {
   name: text('name').notNull(),
   type: text('type', { enum: ['cash', 'bank'] }).notNull(),
   currency: text('currency', { enum: CURRENCY_ENUM }).notNull(),
-  initialBalance: integer('initial_balance').notNull().default(0),
+  balance: integer('balance').notNull().default(0),
   isDefault: boolean('is_default').notNull().default(false),
   color: text('color'),
   icon: text('icon'),

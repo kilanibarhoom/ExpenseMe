@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/Card';
-import type { Debt } from '@/db/schema';
+import type { LocalDebt as Debt } from '@/db/local-schema';
 import { formatMoney } from '@/lib/money';
 import { spacing, useThemeColors } from '@/lib/theme';
 

@@ -14,7 +14,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ChoiceChips, FieldLabel, PrimaryButton, TextField } from '@/components/form';
+import { ChoiceChips, FieldLabel, TextField } from '@/components/form';
+import { NativeButton } from '@/components/NativeButton';
 import { createDebt } from '@/features/debts/queries';
 import { CURRENCIES, toMinor, type Currency } from '@/lib/money';
 import { radii, spacing, useThemeColors } from '@/lib/theme';
@@ -121,7 +122,7 @@ export default function NewDebtScreen() {
             />
           </View>
         </View>
-        <PrimaryButton title={t('common.save')} onPress={save} disabled={saving} />
+        <NativeButton title={t('common.save')} onPress={save} disabled={saving} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

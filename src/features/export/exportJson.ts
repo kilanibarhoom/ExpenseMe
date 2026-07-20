@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-import { db } from '@/db/client';
+import { localDb as db } from '@/db/local';
 import {
   accounts,
   categories,
@@ -11,7 +11,7 @@ import {
   settings,
   transactions,
   transfers,
-} from '@/db/schema';
+} from '@/db/local-schema';
 
 /** Dump every table to a JSON file and open the system share sheet. */
 export async function exportDataAsJson(): Promise<void> {

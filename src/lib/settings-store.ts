@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { I18nManager } from 'react-native';
 import { create } from 'zustand';
 
-import { db } from '@/db/client';
-import { settings } from '@/db/schema';
+import { localDb as db } from '@/db/local';
+import { settings } from '@/db/local-schema';
+import { enqueueChange } from '@/features/sync/outbox';
 import { initI18n, type AppLocale } from '@/i18n';
 
 type ThemePref = 'system' | 'light' | 'dark';
@@ -51,6 +52,7 @@ export const useSettings = create<SettingsState>((set) => ({
 
   setLocale: async (locale) => {
     await db.update(settings).set({ locale }).where(SINGLETON);
+    await enqueueChange('settings', 'singleton', 'update');
     initI18n(locale);
     const wantRTL = locale === 'ar';
     const needsReload = I18nManager.isRTL !== wantRTL;
@@ -62,21 +64,25 @@ export const useSettings = create<SettingsState>((set) => ({
 
   setTheme: async (theme) => {
     await db.update(settings).set({ theme }).where(SINGLETON);
+    await enqueueChange('settings', 'singleton', 'update');
     set({ theme });
   },
 
   setDefaultAccountId: async (defaultAccountId) => {
     await db.update(settings).set({ defaultAccountId }).where(SINGLETON);
+    await enqueueChange('settings', 'singleton', 'update');
     set({ defaultAccountId });
   },
 
   setFxRefreshHours: async (fxRefreshHours) => {
     await db.update(settings).set({ fxRefreshHours }).where(SINGLETON);
+    await enqueueChange('settings', 'singleton', 'update');
     set({ fxRefreshHours });
   },
 
   setLastFxSyncAt: async (lastFxSyncAt) => {
     await db.update(settings).set({ lastFxSyncAt }).where(SINGLETON);
+    await enqueueChange('settings', 'singleton', 'update');
     set({ lastFxSyncAt });
   },
 }));

@@ -54,3 +54,18 @@ export function useResolvedScheme(): 'light' | 'dark' {
 export function useThemeColors(): ThemeColors {
   return palettes[useResolvedScheme()];
 }
+
+/**
+ * Text colors matching iOS's system label colors, driven by the device's
+ * actual current appearance — not the app's own theme override. Native
+ * chrome (Liquid Glass sheets, in particular) always follows the real
+ * system setting regardless of what the in-app theme toggle is set to, so
+ * content sitting directly on that glass must track the same source or the
+ * two can end up mismatched (e.g. dark text over dark glass).
+ */
+export function useNativeSheetColors(): { text: string; textMuted: string } {
+  const system = useColorScheme();
+  return system === 'dark'
+    ? { text: '#FFFFFF', textMuted: 'rgba(235,235,245,0.6)' }
+    : { text: '#000000', textMuted: 'rgba(60,60,67,0.6)' };
+}

@@ -1,22 +1,75 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useState } from 'react';
+import { Children, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Card } from '@/components/Card';
 import { ChoiceChips } from '@/components/form';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/Screen';
 import { setDefaultAccount, useAccountsWithBalances } from '@/features/accounts/queries';
 import { exportDataAsJson } from '@/features/export/exportJson';
 import { refreshRatesNow } from '@/features/fx/refresh';
 import { useFxRates } from '@/features/fx/useFxRates';
-import { spacing, useThemeColors } from '@/lib/theme';
+import { radii, spacing, useThemeColors } from '@/lib/theme';
 import { useSettings } from '@/lib/settings-store';
 
 function SectionTitle({ children }: { children: string }) {
   const colors = useThemeColors();
-  return <Text style={[styles.sectionTitle, { color: colors.text }]}>{children}</Text>;
+  return <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{children}</Text>;
+}
+
+/** iOS-style grouped list card: one rounded container, hairline dividers between rows. */
+function SettingsCard({ children }: { children: ReactNode }) {
+  const colors = useThemeColors();
+  const items = Children.toArray(children);
+  return (
+    <View style={[styles.card, { backgroundColor: colors.card }]}>
+      {items.map((child, i) => (
+        <View key={i}>
+          {child}
+          {i < items.length - 1 && (
+            <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function SettingsRow({
+  icon,
+  iconColor,
+  label,
+  labelColor,
+  sub,
+  onPress,
+  chevron,
+  disabled,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
+  label: string;
+  labelColor?: string;
+  sub?: string;
+  onPress?: () => void;
+  chevron?: boolean;
+  disabled?: boolean;
+}) {
+  const colors = useThemeColors();
+  const Wrapper = onPress ? Pressable : View;
+  return (
+    <Wrapper
+      accessibilityRole={onPress ? 'button' : undefined}
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.rowPress}
+    >
+      <Ionicons name={icon} size={20} color={iconColor ?? colors.textMuted} />
+      <Text style={[styles.rowLabel, { color: labelColor ?? colors.text, flex: 1 }]}>{label}</Text>
+      {sub && <Text style={[styles.rowSub, { color: colors.textMuted }]}>{sub}</Text>}
+      {chevron && <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+    </Wrapper>
+  );
 }
 
 export default function SettingsScreen() {
@@ -93,9 +146,6 @@ export default function SettingsScreen() {
 
         <SectionTitle>{t('settings.fxSection')}</SectionTitle>
         <View style={styles.block}>
-          <Text style={[styles.hint, { color: colors.textMuted }]}>
-            {t('settings.fxRefreshHours')}
-          </Text>
           <ChoiceChips
             value={String(fxRefreshHours)}
             onChange={(v) => void setFxRefreshHours(Number(v))}
@@ -104,73 +154,54 @@ export default function SettingsScreen() {
               label: t('settings.hours', { count: h }),
             }))}
           />
-          <Card style={styles.rowCard}>
-            <Pressable
-              accessibilityRole="button"
+          <SettingsCard>
+            <SettingsRow
+              icon="refresh"
+              iconColor={colors.blue}
+              label={t('settings.refreshNow')}
+              sub={
+                lastFxSyncAt
+                  ? t('settings.lastSync', {
+                      date: new Intl.DateTimeFormat(i18n.language, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      }).format(lastFxSyncAt),
+                    })
+                  : t('settings.neverSynced')
+              }
               onPress={() => void manualRefresh()}
-              style={styles.rowPress}
               disabled={refreshing}
-            >
-              <Ionicons name="refresh" size={20} color={colors.blue} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>
-                  {t('settings.refreshNow')}
-                </Text>
-                <Text style={[styles.rowSub, { color: colors.textMuted }]}>
-                  {lastFxSyncAt
-                    ? t('settings.lastSync', {
-                        date: new Intl.DateTimeFormat(i18n.language, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }).format(lastFxSyncAt),
-                      })
-                    : t('settings.neverSynced')}
-                </Text>
-              </View>
-            </Pressable>
-          </Card>
+            />
+          </SettingsCard>
         </View>
 
         <SectionTitle>{t('settings.data')}</SectionTitle>
         <View style={styles.block}>
-          <Card style={styles.rowCard}>
-            <Pressable
-              accessibilityRole="button"
+          <SettingsCard>
+            <SettingsRow
+              icon="download-outline"
+              label={t('settings.exportJson')}
+              chevron
               onPress={() => void exportDataAsJson()}
-              style={styles.rowPress}
-            >
-              <Ionicons name="download-outline" size={20} color={colors.text} />
-              <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>
-                {t('settings.exportJson')}
-              </Text>
-            </Pressable>
-          </Card>
-          <Card style={styles.rowCard}>
-            <View style={styles.rowPress}>
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.textMuted} />
-              <Text style={[styles.rowLabel, { color: colors.textMuted, flex: 1 }]}>
-                {t('settings.backup')}
-              </Text>
-              <Text style={[styles.rowSub, { color: colors.textMuted }]}>
-                {t('common.comingSoon')}
-              </Text>
-            </View>
-          </Card>
+            />
+            <SettingsRow
+              icon="cloud-upload-outline"
+              label={t('settings.backup')}
+              labelColor={colors.textMuted}
+              sub={t('common.comingSoon')}
+            />
+          </SettingsCard>
         </View>
 
         <SectionTitle>{t('settings.about')}</SectionTitle>
         <View style={styles.block}>
-          <Card style={styles.rowCard}>
-            <View style={styles.rowPress}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
-              <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>
-                {t('appName')}
-              </Text>
-              <Text style={[styles.rowSub, { color: colors.textMuted }]}>
-                {t('settings.version')} {Constants.expoConfig?.version ?? '1.0.0'}
-              </Text>
-            </View>
-          </Card>
+          <SettingsCard>
+            <SettingsRow
+              icon="information-circle-outline"
+              label={t('appName')}
+              sub={`${t('settings.version')} ${Constants.expoConfig?.version ?? '1.0.0'}`}
+            />
+          </SettingsCard>
         </View>
       </ScrollView>
     </Screen>
@@ -180,16 +211,18 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: 34, fontWeight: '800', paddingHorizontal: spacing.l, marginBottom: spacing.l },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    paddingHorizontal: spacing.l,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    paddingHorizontal: spacing.xl,
     marginTop: spacing.l,
-    marginBottom: spacing.s,
+    marginBottom: spacing.xs,
   },
   block: { paddingHorizontal: spacing.l, gap: spacing.s },
-  hint: { fontSize: 12, fontWeight: '600' },
-  rowCard: { padding: 0 },
+  card: { borderRadius: radii.control, overflow: 'hidden' },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.l + 20 + spacing.m },
   rowPress: { flexDirection: 'row', alignItems: 'center', gap: spacing.m, padding: spacing.l },
-  rowLabel: { fontSize: 15, fontWeight: '600' },
-  rowSub: { fontSize: 12 },
+  rowLabel: { fontSize: 15, fontWeight: '500' },
+  rowSub: { fontSize: 13 },
 });

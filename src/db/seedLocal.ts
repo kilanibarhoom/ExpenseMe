@@ -1,11 +1,11 @@
+import { enqueueChange } from '@/features/sync/outbox';
 import { newId } from '@/lib/id';
 
-import { db } from './client';
-import { categories, settings } from './schema';
+import { localDb } from './local';
+import { categories, settings } from './local-schema';
 
-// Expense colors are the pie chart's categorical palette — the set below
-// passes the dataviz six-checks validator (lightness band, chroma floor,
-// CVD separation, contrast) on both light and dark surfaces.
+// Only runs when categories/settings are still missing after a bootstrap
+// pull — i.e. Neon itself was never seeded.
 const EXPENSE_SEED: [key: string, en: string, ar: string, icon: string, color: string][] = [
   ['food_drinks', 'Food & Drinks', 'طعام ومشروبات', '🍔', '#B45309'],
   ['shopping', 'Shopping', 'تسوق', '🛍️', '#DC2626'],
@@ -23,9 +23,9 @@ const INCOME_SEED: [key: string, en: string, ar: string, icon: string, color: st
   ['other', 'Other', 'أخرى', '💰', '#6B7280'],
 ];
 
-export async function seedIfEmpty(): Promise<void> {
-  const existing = await db.select({ id: categories.id }).from(categories).limit(1);
-  if (existing.length === 0) {
+export async function seedLocalIfEmpty(): Promise<void> {
+  const existingCategories = await localDb.select({ id: categories.id }).from(categories).limit(1);
+  if (existingCategories.length === 0) {
     const rows = [
       ...EXPENSE_SEED.map((c, i) => ({ kind: 'expense' as const, seed: c, sortOrder: i })),
       ...INCOME_SEED.map((c, i) => ({ kind: 'income' as const, seed: c, sortOrder: i })),
@@ -40,11 +40,15 @@ export async function seedIfEmpty(): Promise<void> {
       isSystem: true,
       sortOrder,
     }));
-    await db.insert(categories).values(rows);
+    for (const row of rows) {
+      await localDb.insert(categories).values(row);
+      await enqueueChange('categories', row.id, 'insert');
+    }
   }
 
-  const settingsRow = await db.select({ id: settings.id }).from(settings).limit(1);
-  if (settingsRow.length === 0) {
-    await db.insert(settings).values({ id: 'singleton' });
+  const existingSettings = await localDb.select({ id: settings.id }).from(settings).limit(1);
+  if (existingSettings.length === 0) {
+    await localDb.insert(settings).values({ id: 'singleton' });
+    await enqueueChange('settings', 'singleton', 'insert');
   }
 }

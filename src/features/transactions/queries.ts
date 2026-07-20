@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { desc, eq } from 'drizzle-orm';
 
-import { db } from '@/db/client';
-import { categories, transactions, transfers } from '@/db/schema';
+import { localDb as db } from '@/db/local';
+import { categories, transactions, transfers } from '@/db/local-schema';
 import type { Currency } from '@/lib/money';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -155,4 +155,24 @@ export function useCategories(kind?: 'expense' | 'income') {
         : db.select().from(categories).orderBy(categories.kind, categories.sortOrder),
   });
   return query.data ?? [];
+}
+
+/** Fetch a single transaction row for the edit form (undefined while loading / if missing). */
+export function useTransactionForEdit(id: string | undefined) {
+  const query = useQuery({
+    queryKey: queryKeys.transaction(id ?? ''),
+    queryFn: async () => (await db.select().from(transactions).where(eq(transactions.id, id!)))[0] ?? null,
+    enabled: !!id,
+  });
+  return query.data ?? undefined;
+}
+
+/** Fetch a single transfer row for the edit form (undefined while loading / if missing). */
+export function useTransferForEdit(id: string | undefined) {
+  const query = useQuery({
+    queryKey: queryKeys.transfer(id ?? ''),
+    queryFn: async () => (await db.select().from(transfers).where(eq(transfers.id, id!)))[0] ?? null,
+    enabled: !!id,
+  });
+  return query.data ?? undefined;
 }

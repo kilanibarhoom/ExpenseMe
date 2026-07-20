@@ -10,9 +10,9 @@ export const queryKeys = {
   // Full-shape rows (occurredAt, currency, category info, ...) for the activity feed.
   transactionsAll: ['transactions', 'all'] as const,
   transfersAll: ['transfers', 'all'] as const,
-  // Slim {accountId, type, amount} rows used only to derive account balances.
-  transactionsForBalances: ['transactions', 'balances'] as const,
-  transfersForBalances: ['transfers', 'balances'] as const,
+  // Single full rows for the edit form.
+  transaction: (id: string) => ['transactions', 'one', id] as const,
+  transfer: (id: string) => ['transfers', 'one', id] as const,
   categories: (kind?: 'expense' | 'income') => ['categories', kind ?? 'all'] as const,
   debts: ['debts'] as const,
   debt: (id: string) => ['debts', id] as const,

@@ -12,8 +12,8 @@ import { ChoiceChips } from '@/components/form';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/Screen';
 import {
   archiveAccount,
+  deleteAccount,
   setDefaultAccount,
-  updateAccount,
   useAccountsWithBalances,
 } from '@/features/accounts/queries';
 import { useActivity, useCategories } from '@/features/transactions/queries';
@@ -42,18 +42,28 @@ export default function AccountDetailScreen() {
     categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
   });
 
+  const { items: allAccountItems } = useActivity({ accountId: id });
+
   if (!entry) return <Screen />;
   const { account, balanceMinor } = entry;
 
-  const rename = () => {
-    Alert.prompt?.(
-      t('account.editTitle'),
-      undefined,
-      (name) => {
-        if (name?.trim()) void updateAccount(account.id, { name: name.trim() });
-      },
-      'plain-text',
-      account.name,
+  const edit = () => router.push({ pathname: '/account/new', params: { id: account.id } });
+
+  const confirmDelete = () => {
+    Alert.alert(
+      t('account.deleteConfirmTitle'),
+      t('account.deleteConfirmBody', { count: allAccountItems.length }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            await deleteAccount(account.id);
+            router.back();
+          },
+        },
+      ],
     );
   };
 
@@ -84,11 +94,14 @@ export default function AccountDetailScreen() {
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {account.name}
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common.edit')} onPress={rename}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.edit')} onPress={edit}>
           <Ionicons name="pencil" size={20} color={colors.text} />
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('account.archive')} onPress={archive}>
-          <Ionicons name="archive-outline" size={20} color={colors.red} />
+          <Ionicons name="archive-outline" size={20} color={colors.text} />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.delete')} onPress={confirmDelete}>
+          <Ionicons name="trash-outline" size={20} color={colors.red} />
         </Pressable>
       </View>
 
@@ -97,7 +110,13 @@ export default function AccountDetailScreen() {
         keyExtractor={(item) => `${item.kind}-${item.id}`}
         renderItem={({ item }) => (
           <View style={styles.rowWrap}>
-            <ActivityRow item={item} perspectiveAccountId={account.id} />
+            <ActivityRow
+              item={item}
+              perspectiveAccountId={account.id}
+              onPress={() =>
+                router.push({ pathname: '/quick-add', params: { id: item.id, kind: item.kind } })
+              }
+            />
           </View>
         )}
         contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}

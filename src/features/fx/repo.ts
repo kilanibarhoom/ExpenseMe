@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 
-import { db } from '@/db/client';
-import { fxRates } from '@/db/schema';
+import { localDb as db } from '@/db/local';
+import { fxRates } from '@/db/local-schema';
+import { enqueueChange } from '@/features/sync/outbox';
 import { newId } from '@/lib/id';
 
 export interface CachedRates {
@@ -38,8 +39,11 @@ export async function upsertRates(
         .update(fxRates)
         .set({ rateToIls: rates[quote], fetchedAt, source })
         .where(eq(fxRates.quote, quote));
+      await enqueueChange('fxRates', existing.id, 'update');
     } else {
-      await db.insert(fxRates).values({ id: newId(), quote, rateToIls: rates[quote], fetchedAt, source });
+      const id = newId();
+      await db.insert(fxRates).values({ id, quote, rateToIls: rates[quote], fetchedAt, source });
+      await enqueueChange('fxRates', id, 'insert');
     }
   }
 }
