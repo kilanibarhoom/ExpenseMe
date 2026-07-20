@@ -76,7 +76,7 @@
     "emptyActivityTitle": "Nothing here yet",
     "emptyActivityBody": "Tap + to add your first expense",
     "addAccount": "Add wallet",
-    "addExpense": "Add Expense",
+    "add": "Add",
     "transfer": "Transfer",
     "archived": "Archived",
     "showMore": "Show {{count}} more",

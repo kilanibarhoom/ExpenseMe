@@ -76,7 +76,7 @@
     "emptyActivityTitle": "لا يوجد شيء هنا بعد",
     "emptyActivityBody": "اضغط + لإضافة أول مصروف",
     "addAccount": "إضافة محفظة",
-    "addExpense": "إضافة مصروف",
+    "add": "إضافة",
     "transfer": "تحويل",
     "archived": "مؤرشفة",
     "showMore": "عرض {{count}} أخرى",
